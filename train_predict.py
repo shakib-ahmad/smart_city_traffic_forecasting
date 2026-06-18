@@ -2,17 +2,26 @@ import os
 import pandas as pd
 import numpy as np
 import xgboost as xgb
+import holidays
 from sklearn.metrics import root_mean_squared_error
 import matplotlib.pyplot as plt
 
 def prepare_features(df):
     df['DateTime'] = pd.to_datetime(df['DateTime'])
     df = df.sort_values('DateTime')
+    
+    # Base datetime features
     df['Hour'] = df['DateTime'].dt.hour
     df['DayOfWeek'] = df['DateTime'].dt.dayofweek
     df['DayOfMonth'] = df['DateTime'].dt.day
     df['Month'] = df['DateTime'].dt.month
     df['Year'] = df['DateTime'].dt.year
+    
+    # Holiday feature to capture variations on public holidays (specifically in India)
+    years = df['DateTime'].dt.year.unique()
+    in_holidays = holidays.India(years=years.tolist())
+    df['IsHoliday'] = df['DateTime'].dt.date.apply(lambda x: 1 if x in in_holidays else 0)
+    
     return df
 
 def train_model(X_train, y_train):
@@ -64,7 +73,7 @@ if __name__ == "__main__":
     train_df = df.iloc[:split_idx]
     val_df = df.iloc[split_idx:]
     
-    features = ['Junction', 'Hour', 'DayOfWeek', 'DayOfMonth', 'Month', 'Year']
+    features = ['Junction', 'Hour', 'DayOfWeek', 'DayOfMonth', 'Month', 'Year', 'IsHoliday']
     target = 'Vehicles'
     
     X_train = train_df[features]
